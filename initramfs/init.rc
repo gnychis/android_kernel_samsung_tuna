@@ -342,6 +342,9 @@ on boot
 
 # Set this property so surfaceflinger is not started by system_init
     setprop system_init.startsurfaceflinger 0
+    
+# Insert the wireless module
+    insmod /system/lib/modules/bcmdhd.ko
 
 # Run sysinit
     exec /system/bin/sysinit
@@ -529,3 +532,4 @@ on property:service.adb.tcp.port=5555
 on property:service.adb.tcp.port=-1
     stop adbd
     start adbd
+
