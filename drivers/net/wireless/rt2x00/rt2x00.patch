@@ -1,0 +1,477 @@
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2800lib.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2800lib.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2800lib.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2800lib.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 3514,3520 ****
+  	/* Apparently the data is read from end to start */
+  	rt2800_register_read_lock(rt2x00dev, EFUSE_DATA3, &reg);
+  	/* The returned value is in CPU order, but eeprom is le */
+! 	*(u32 *)&rt2x00dev->eeprom[i] = cpu_to_le32(reg);
+  	rt2800_register_read_lock(rt2x00dev, EFUSE_DATA2, &reg);
+  	*(u32 *)&rt2x00dev->eeprom[i + 2] = cpu_to_le32(reg);
+  	rt2800_register_read_lock(rt2x00dev, EFUSE_DATA1, &reg);
+--- 3514,3520 ----
+  	/* Apparently the data is read from end to start */
+  	rt2800_register_read_lock(rt2x00dev, EFUSE_DATA3, &reg);
+  	/* The returned value is in CPU order, but eeprom is le */
+! 	rt2x00dev->eeprom[i] = cpu_to_le32(reg);
+  	rt2800_register_read_lock(rt2x00dev, EFUSE_DATA2, &reg);
+  	*(u32 *)&rt2x00dev->eeprom[i + 2] = cpu_to_le32(reg);
+  	rt2800_register_read_lock(rt2x00dev, EFUSE_DATA1, &reg);
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2800pci.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2800pci.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2800pci.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2800pci.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 426,431 ****
+--- 426,432 ----
+  static void rt2800pci_toggle_irq(struct rt2x00_dev *rt2x00dev,
+  				 enum dev_state state)
+  {
++ 	int mask = (state == STATE_RADIO_IRQ_ON);
+  	u32 reg;
+  	unsigned long flags;
+  
+***************
+*** 447,460 ****
+  	}
+  
+  	spin_lock_irqsave(&rt2x00dev->irqmask_lock, flags);
+! 	reg = 0;
+! 	if (state == STATE_RADIO_IRQ_ON) {
+! 		rt2x00_set_field32(&reg, INT_MASK_CSR_RX_DONE, 1);
+! 		rt2x00_set_field32(&reg, INT_MASK_CSR_TBTT, 1);
+! 		rt2x00_set_field32(&reg, INT_MASK_CSR_PRE_TBTT, 1);
+! 		rt2x00_set_field32(&reg, INT_MASK_CSR_TX_FIFO_STATUS, 1);
+! 		rt2x00_set_field32(&reg, INT_MASK_CSR_AUTO_WAKEUP, 1);
+! 	}
+  	rt2x00pci_register_write(rt2x00dev, INT_MASK_CSR, reg);
+  	spin_unlock_irqrestore(&rt2x00dev->irqmask_lock, flags);
+  
+--- 448,472 ----
+  	}
+  
+  	spin_lock_irqsave(&rt2x00dev->irqmask_lock, flags);
+! 	rt2x00pci_register_read(rt2x00dev, INT_MASK_CSR, &reg);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_RXDELAYINT, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_TXDELAYINT, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_RX_DONE, mask);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_AC0_DMA_DONE, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_AC1_DMA_DONE, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_AC2_DMA_DONE, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_AC3_DMA_DONE, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_HCCA_DMA_DONE, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_MGMT_DMA_DONE, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_MCU_COMMAND, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_RXTX_COHERENT, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_TBTT, mask);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_PRE_TBTT, mask);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_TX_FIFO_STATUS, mask);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_AUTO_WAKEUP, mask);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_GPTIMER, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_RX_COHERENT, 0);
+! 	rt2x00_set_field32(&reg, INT_MASK_CSR_TX_COHERENT, 0);
+  	rt2x00pci_register_write(rt2x00dev, INT_MASK_CSR, reg);
+  	spin_unlock_irqrestore(&rt2x00dev->irqmask_lock, flags);
+  
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2800usb.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2800usb.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2800usb.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2800usb.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 819,835 ****
+  	{ USB_DEVICE(0x050d, 0x8053) },
+  	{ USB_DEVICE(0x050d, 0x805c) },
+  	{ USB_DEVICE(0x050d, 0x815c) },
+- 	{ USB_DEVICE(0x050d, 0x825a) },
+  	{ USB_DEVICE(0x050d, 0x825b) },
+  	{ USB_DEVICE(0x050d, 0x935a) },
+  	{ USB_DEVICE(0x050d, 0x935b) },
+  	/* Buffalo */
+  	{ USB_DEVICE(0x0411, 0x00e8) },
+- 	{ USB_DEVICE(0x0411, 0x0158) },
+- 	{ USB_DEVICE(0x0411, 0x015d) },
+  	{ USB_DEVICE(0x0411, 0x016f) },
+  	{ USB_DEVICE(0x0411, 0x01a2) },
+- 	{ USB_DEVICE(0x0411, 0x01ee) },
+  	/* Corega */
+  	{ USB_DEVICE(0x07aa, 0x002f) },
+  	{ USB_DEVICE(0x07aa, 0x003c) },
+--- 819,831 ----
+***************
+*** 842,858 ****
+  	{ USB_DEVICE(0x07d1, 0x3c0e) },
+  	{ USB_DEVICE(0x07d1, 0x3c0f) },
+  	{ USB_DEVICE(0x07d1, 0x3c11) },
+- 	{ USB_DEVICE(0x07d1, 0x3c13) },
+- 	{ USB_DEVICE(0x07d1, 0x3c15) },
+  	{ USB_DEVICE(0x07d1, 0x3c16) },
+- 	{ USB_DEVICE(0x2001, 0x3c1b) },
+  	/* Draytek */
+  	{ USB_DEVICE(0x07fa, 0x7712) },
+  	/* Edimax */
+  	{ USB_DEVICE(0x7392, 0x7711) },
+  	{ USB_DEVICE(0x7392, 0x7717) },
+  	{ USB_DEVICE(0x7392, 0x7718) },
+- 	{ USB_DEVICE(0x7392, 0x7722) },
+  	/* Encore */
+  	{ USB_DEVICE(0x203d, 0x1480) },
+  	{ USB_DEVICE(0x203d, 0x14a9) },
+--- 838,850 ----
+***************
+*** 886,893 ****
+  	{ USB_DEVICE(0x13b1, 0x0031) },
+  	{ USB_DEVICE(0x1737, 0x0070) },
+  	{ USB_DEVICE(0x1737, 0x0071) },
+- 	{ USB_DEVICE(0x1737, 0x0077) },
+- 	{ USB_DEVICE(0x1737, 0x0078) },
+  	/* Logitec */
+  	{ USB_DEVICE(0x0789, 0x0162) },
+  	{ USB_DEVICE(0x0789, 0x0163) },
+--- 878,883 ----
+***************
+*** 911,923 ****
+  	{ USB_DEVICE(0x0db0, 0x871b) },
+  	{ USB_DEVICE(0x0db0, 0x871c) },
+  	{ USB_DEVICE(0x0db0, 0x899a) },
+- 	/* Ovislink */
+- 	{ USB_DEVICE(0x1b75, 0x3071) },
+- 	{ USB_DEVICE(0x1b75, 0x3072) },
+  	/* Para */
+  	{ USB_DEVICE(0x20b8, 0x8888) },
+  	/* Pegatron */
+- 	{ USB_DEVICE(0x1d4d, 0x0002) },
+  	{ USB_DEVICE(0x1d4d, 0x000c) },
+  	{ USB_DEVICE(0x1d4d, 0x000e) },
+  	{ USB_DEVICE(0x1d4d, 0x0011) },
+--- 901,909 ----
+***************
+*** 955,961 ****
+  	{ USB_DEVICE(0x0df6, 0x0048) },
+  	{ USB_DEVICE(0x0df6, 0x0051) },
+  	{ USB_DEVICE(0x0df6, 0x005f) },
+- 	{ USB_DEVICE(0x0df6, 0x0060) },
+  	/* SMC */
+  	{ USB_DEVICE(0x083a, 0x6618) },
+  	{ USB_DEVICE(0x083a, 0x7511) },
+--- 941,946 ----
+***************
+*** 970,978 ****
+  	/* Sparklan */
+  	{ USB_DEVICE(0x15a9, 0x0006) },
+  	/* Sweex */
+- 	{ USB_DEVICE(0x177f, 0x0153) },
+  	{ USB_DEVICE(0x177f, 0x0302) },
+- 	{ USB_DEVICE(0x177f, 0x0313) },
+  	/* U-Media */
+  	{ USB_DEVICE(0x157e, 0x300e) },
+  	{ USB_DEVICE(0x157e, 0x3013) },
+--- 955,961 ----
+***************
+*** 990,997 ****
+  	{ USB_DEVICE(0x0586, 0x341e) },
+  	{ USB_DEVICE(0x0586, 0x343e) },
+  #ifdef CONFIG_RT2800USB_RT33XX
+- 	/* Belkin */
+- 	{ USB_DEVICE(0x050d, 0x945b) },
+  	/* Ralink */
+  	{ USB_DEVICE(0x148f, 0x3370) },
+  	{ USB_DEVICE(0x148f, 0x8070) },
+--- 973,978 ----
+***************
+*** 1016,1022 ****
+  	{ USB_DEVICE(0x148f, 0x3572) },
+  	/* Sitecom */
+  	{ USB_DEVICE(0x0df6, 0x0041) },
+- 	{ USB_DEVICE(0x0df6, 0x0062) },
+  	/* Toshiba */
+  	{ USB_DEVICE(0x0930, 0x0a07) },
+  	/* Zinwell */
+--- 997,1002 ----
+***************
+*** 1056,1079 ****
+  	{ USB_DEVICE(0x13d3, 0x3322) },
+  	/* Belkin */
+  	{ USB_DEVICE(0x050d, 0x1003) },
+  	/* Buffalo */
+  	{ USB_DEVICE(0x0411, 0x012e) },
+  	{ USB_DEVICE(0x0411, 0x0148) },
+  	{ USB_DEVICE(0x0411, 0x0150) },
+  	/* Corega */
+  	{ USB_DEVICE(0x07aa, 0x0041) },
+  	{ USB_DEVICE(0x07aa, 0x0042) },
+  	{ USB_DEVICE(0x18c5, 0x0008) },
+  	/* D-Link */
+  	{ USB_DEVICE(0x07d1, 0x3c0b) },
+  	{ USB_DEVICE(0x07d1, 0x3c17) },
+  	{ USB_DEVICE(0x2001, 0x3c17) },
+  	/* Edimax */
+  	{ USB_DEVICE(0x7392, 0x4085) },
+  	/* Encore */
+  	{ USB_DEVICE(0x203d, 0x14a1) },
+- 	/* Fujitsu Stylistic 550 */
+- 	{ USB_DEVICE(0x1690, 0x0761) },
+  	/* Gemtek */
+  	{ USB_DEVICE(0x15a9, 0x0010) },
+  	/* Gigabyte */
+--- 1036,1062 ----
+  	{ USB_DEVICE(0x13d3, 0x3322) },
+  	/* Belkin */
+  	{ USB_DEVICE(0x050d, 0x1003) },
++ 	{ USB_DEVICE(0x050d, 0x825a) },
+  	/* Buffalo */
+  	{ USB_DEVICE(0x0411, 0x012e) },
+  	{ USB_DEVICE(0x0411, 0x0148) },
+  	{ USB_DEVICE(0x0411, 0x0150) },
++ 	{ USB_DEVICE(0x0411, 0x015d) },
+  	/* Corega */
+  	{ USB_DEVICE(0x07aa, 0x0041) },
+  	{ USB_DEVICE(0x07aa, 0x0042) },
+  	{ USB_DEVICE(0x18c5, 0x0008) },
+  	/* D-Link */
+  	{ USB_DEVICE(0x07d1, 0x3c0b) },
++ 	{ USB_DEVICE(0x07d1, 0x3c13) },
++ 	{ USB_DEVICE(0x07d1, 0x3c15) },
+  	{ USB_DEVICE(0x07d1, 0x3c17) },
+  	{ USB_DEVICE(0x2001, 0x3c17) },
+  	/* Edimax */
+  	{ USB_DEVICE(0x7392, 0x4085) },
++ 	{ USB_DEVICE(0x7392, 0x7722) },
+  	/* Encore */
+  	{ USB_DEVICE(0x203d, 0x14a1) },
+  	/* Gemtek */
+  	{ USB_DEVICE(0x15a9, 0x0010) },
+  	/* Gigabyte */
+***************
+*** 1085,1097 ****
+--- 1068,1087 ----
+  	/* LevelOne */
+  	{ USB_DEVICE(0x1740, 0x0605) },
+  	{ USB_DEVICE(0x1740, 0x0615) },
++ 	/* Linksys */
++ 	{ USB_DEVICE(0x1737, 0x0077) },
++ 	{ USB_DEVICE(0x1737, 0x0078) },
+  	/* Logitec */
+  	{ USB_DEVICE(0x0789, 0x0168) },
+  	{ USB_DEVICE(0x0789, 0x0169) },
+  	/* Motorola */
+  	{ USB_DEVICE(0x100d, 0x9032) },
++ 	/* Ovislink */
++ 	{ USB_DEVICE(0x1b75, 0x3071) },
++ 	{ USB_DEVICE(0x1b75, 0x3072) },
+  	/* Pegatron */
+  	{ USB_DEVICE(0x05a6, 0x0101) },
++ 	{ USB_DEVICE(0x1d4d, 0x0002) },
+  	{ USB_DEVICE(0x1d4d, 0x0010) },
+  	/* Planex */
+  	{ USB_DEVICE(0x2019, 0x5201) },
+***************
+*** 1105,1115 ****
+--- 1095,1110 ----
+  	{ USB_DEVICE(0x0df6, 0x004a) },
+  	{ USB_DEVICE(0x0df6, 0x004d) },
+  	{ USB_DEVICE(0x0df6, 0x0053) },
++ 	{ USB_DEVICE(0x0df6, 0x0060) },
++ 	{ USB_DEVICE(0x0df6, 0x0062) },
+  	/* SMC */
+  	{ USB_DEVICE(0x083a, 0xa512) },
+  	{ USB_DEVICE(0x083a, 0xc522) },
+  	{ USB_DEVICE(0x083a, 0xd522) },
+  	{ USB_DEVICE(0x083a, 0xf511) },
++ 	/* Sweex */
++ 	{ USB_DEVICE(0x177f, 0x0153) },
++ 	{ USB_DEVICE(0x177f, 0x0313) },
+  	/* Zyxel */
+  	{ USB_DEVICE(0x0586, 0x341a) },
+  #endif
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00.h compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00.h
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00.h	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00.h	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 922,928 ****
+  	 * Powersaving work
+  	 */
+  	struct delayed_work autowakeup_work;
+- 	struct work_struct sleep_work;
+  
+  	/*
+  	 * Data queue arrays for RX, TX, Beacon and ATIM.
+--- 922,927 ----
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00dev.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00dev.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00dev.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00dev.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 410,423 ****
+  	/*
+  	 * If the data queue was below the threshold before the txdone
+  	 * handler we must make sure the packet queue in the mac80211 stack
+! 	 * is reenabled when the txdone handler has finished. This has to be
+! 	 * serialized with rt2x00mac_tx(), otherwise we can wake up queue
+! 	 * before it was stopped.
+  	 */
+- 	spin_lock_bh(&entry->queue->tx_lock);
+  	if (!rt2x00queue_threshold(entry->queue))
+  		rt2x00queue_unpause_queue(entry->queue);
+- 	spin_unlock_bh(&entry->queue->tx_lock);
+  }
+  EXPORT_SYMBOL_GPL(rt2x00lib_txdone);
+  
+--- 410,419 ----
+  	/*
+  	 * If the data queue was below the threshold before the txdone
+  	 * handler we must make sure the packet queue in the mac80211 stack
+! 	 * is reenabled when the txdone handler has finished.
+  	 */
+  	if (!rt2x00queue_threshold(entry->queue))
+  		rt2x00queue_unpause_queue(entry->queue);
+  }
+  EXPORT_SYMBOL_GPL(rt2x00lib_txdone);
+  
+***************
+*** 453,475 ****
+  	return NULL;
+  }
+  
+- static void rt2x00lib_sleep(struct work_struct *work)
+- {
+- 	struct rt2x00_dev *rt2x00dev =
+- 	    container_of(work, struct rt2x00_dev, sleep_work);
+- 
+- 	if (!test_bit(DEVICE_STATE_PRESENT, &rt2x00dev->flags))
+- 		return;
+- 
+- 	/*
+- 	 * Check again is powersaving is enabled, to prevent races from delayed
+- 	 * work execution.
+- 	 */
+- 	if (!test_bit(CONFIG_POWERSAVING, &rt2x00dev->flags))
+- 		rt2x00lib_config(rt2x00dev, &rt2x00dev->hw->conf,
+- 				 IEEE80211_CONF_CHANGE_PS);
+- }
+- 
+  static void rt2x00lib_rxdone_check_ps(struct rt2x00_dev *rt2x00dev,
+  				      struct sk_buff *skb,
+  				      struct rxdone_entry_desc *rxdesc)
+--- 449,454 ----
+***************
+*** 517,523 ****
+  	cam |= (tim_ie->bitmap_ctrl & 0x01);
+  
+  	if (!cam && !test_bit(CONFIG_POWERSAVING, &rt2x00dev->flags))
+! 		queue_work(rt2x00dev->workqueue, &rt2x00dev->sleep_work);
+  }
+  
+  static int rt2x00lib_rxdone_read_signal(struct rt2x00_dev *rt2x00dev,
+--- 496,503 ----
+  	cam |= (tim_ie->bitmap_ctrl & 0x01);
+  
+  	if (!cam && !test_bit(CONFIG_POWERSAVING, &rt2x00dev->flags))
+! 		rt2x00lib_config(rt2x00dev, &rt2x00dev->hw->conf,
+! 				 IEEE80211_CONF_CHANGE_PS);
+  }
+  
+  static int rt2x00lib_rxdone_read_signal(struct rt2x00_dev *rt2x00dev,
+***************
+*** 1128,1134 ****
+  
+  	INIT_WORK(&rt2x00dev->intf_work, rt2x00lib_intf_scheduled);
+  	INIT_DELAYED_WORK(&rt2x00dev->autowakeup_work, rt2x00lib_autowakeup);
+- 	INIT_WORK(&rt2x00dev->sleep_work, rt2x00lib_sleep);
+  
+  	/*
+  	 * Let the driver probe the device to detect the capabilities.
+--- 1108,1113 ----
+***************
+*** 1185,1191 ****
+  	 */
+  	cancel_work_sync(&rt2x00dev->intf_work);
+  	cancel_delayed_work_sync(&rt2x00dev->autowakeup_work);
+- 	cancel_work_sync(&rt2x00dev->sleep_work);
+  	if (rt2x00_is_usb(rt2x00dev)) {
+  		del_timer_sync(&rt2x00dev->txstatus_timer);
+  		cancel_work_sync(&rt2x00dev->rxdone_work);
+--- 1164,1169 ----
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00mac.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00mac.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00mac.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00mac.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 152,173 ****
+  	if (unlikely(rt2x00queue_write_tx_frame(queue, skb, false)))
+  		goto exit_fail;
+  
+- 	/*
+- 	 * Pausing queue has to be serialized with rt2x00lib_txdone(). Note
+- 	 * we should not use spin_lock_bh variant as bottom halve was already
+- 	 * disabled before ieee80211_xmit() call.
+- 	 */
+- 	spin_lock(&queue->tx_lock);
+  	if (rt2x00queue_threshold(queue))
+  		rt2x00queue_pause_queue(queue);
+- 	spin_unlock(&queue->tx_lock);
+  
+  	return;
+  
+   exit_fail:
+- 	spin_lock(&queue->tx_lock);
+  	rt2x00queue_pause_queue(queue);
+- 	spin_unlock(&queue->tx_lock);
+   exit_free_skb:
+  	dev_kfree_skb_any(skb);
+  }
+--- 152,164 ----
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00queue.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00queue.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00queue.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00queue.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 562,570 ****
+  	u8 rate_idx, rate_flags;
+  	int ret = 0;
+  
+- 	/*
+- 	 * That function must be called with bh disabled.
+- 	 */
+  	spin_lock(&queue->tx_lock);
+  
+  	entry = rt2x00queue_get_entry(queue, Q_INDEX);
+--- 562,567 ----
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00usb.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00usb.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt2x00usb.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt2x00usb.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 426,433 ****
+  	case QID_RX:
+  		if (!rt2x00queue_full(queue))
+  			rt2x00queue_for_each_entry(queue,
+- 						   Q_INDEX,
+  						   Q_INDEX_DONE,
+  						   NULL,
+  						   rt2x00usb_kick_rx_entry);
+  		break;
+--- 426,433 ----
+  	case QID_RX:
+  		if (!rt2x00queue_full(queue))
+  			rt2x00queue_for_each_entry(queue,
+  						   Q_INDEX_DONE,
++ 						   Q_INDEX,
+  						   NULL,
+  						   rt2x00usb_kick_rx_entry);
+  		break;
+diff -crB galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt61pci.c compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt61pci.c
+*** galaxynexus-cm10-kernel/drivers/net/wireless/rt2x00/rt61pci.c	2012-10-09 22:12:13.000000000 -0400
+--- compat-wireless-3.0.9-1/drivers/net/wireless/rt2x00/rt61pci.c	2012-10-05 10:37:53.000000000 -0400
+***************
+*** 2254,2260 ****
+  
+  static void rt61pci_wakeup(struct rt2x00_dev *rt2x00dev)
+  {
+! 	struct rt2x00lib_conf libconf = { .conf = &rt2x00dev->hw->conf };
+  
+  	rt61pci_config(rt2x00dev, &libconf, IEEE80211_CONF_CHANGE_PS);
+  }
+--- 2254,2261 ----
+  
+  static void rt61pci_wakeup(struct rt2x00_dev *rt2x00dev)
+  {
+! 	struct ieee80211_conf conf = { .flags = 0 };
+! 	struct rt2x00lib_conf libconf = { .conf = &conf };
+  
+  	rt61pci_config(rt2x00dev, &libconf, IEEE80211_CONF_CHANGE_PS);
+  }
