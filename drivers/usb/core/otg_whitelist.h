@@ -99,13 +99,16 @@ static int is_targeted(struct usb_device *dev)
 	/* add other match criteria here ... */
 
 
+  printk("-------------- nope\n");
 	/* OTG MESSAGE: report errors here, customize to match your product */
 	dev_err(&dev->dev, "device v%04x p%04x is not supported\n",
 		le16_to_cpu(dev->descriptor.idVendor),
 		le16_to_cpu(dev->descriptor.idProduct));
 #ifdef	CONFIG_USB_OTG_WHITELIST
+  printk("-------------- returning 0\n");
 	return 0;
 #else
+  printk("-------------- returning 1\n");
 	return 1;
 #endif
 }
