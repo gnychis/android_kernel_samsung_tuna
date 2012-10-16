@@ -1,5 +1,6 @@
 assert(getprop("ro.product.device") == "maguro" || getprop("ro.build.product") == "maguro");
 mount("ext4", "EMMC", "/dev/block/platform/omap/omap_hsmmc.0/by-name/system", "/system");
+delete_recursive("/system/lib/modules");
 package_extract_dir("system", "/system");
 package_extract_file("boot.img", "/dev/block/platform/omap/omap_hsmmc.0/by-name/boot");
 show_progress(0.100000, 0);

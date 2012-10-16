@@ -28,6 +28,8 @@
 #include <osl.h>
 #include <bcmsdh.h>
 
+#define DHD_DEBUG
+
 #ifdef BCMEMBEDIMAGE
 #include BCMEMBEDIMAGE
 #endif /* BCMEMBEDIMAGE */
